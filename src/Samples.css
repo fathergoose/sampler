@@ -1,0 +1,16 @@
+.samplesComponent {
+  display: flex;
+  flex-direction: column;
+}
+
+.samplesWrapper {
+  columns: 2;
+}
+
+.sampleList {
+  height: 20em;
+}
+
+.sampleListSelected {
+  border: 1px solid blue;
+}
