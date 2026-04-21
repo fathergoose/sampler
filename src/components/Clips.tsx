@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useRef, type MouseEvent } from "react";
-import "./Samples.css";
+import "./Clips.css";
+import SampleList from "./SampleList";
 import Control from "./Control";
 import decode from "audio-decode";
-import type { ChartData, ChartOptions } from "chart.js";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,7 +13,7 @@ import {
   Legend,
   Plugin,
 } from "chart.js";
-import { Chart, getDatasetAtEvent } from "react-chartjs-2";
+import { Chart } from "react-chartjs-2";
 
 import { getRelativePosition } from "chart.js/helpers";
 
@@ -26,7 +26,7 @@ ChartJS.register(
   Legend,
 );
 
-interface Sample {
+export interface Sample {
   id: number;
   name: string;
   path: string;
@@ -34,20 +34,30 @@ interface Sample {
   created: string;
 }
 
-interface LineProps {
-  options: ChartOptions<"line">;
-  data: ChartData<"line">;
+export interface Clip {
+  id: number;
+  name: string;
+  startAt: number;
+  endAt: number;
+  gain: number;
+  sample: Sample | null;
 }
-
+const initClip = {
+  id: 1,
+  name: "Kick 808",
+  startAt: 0,
+  endAt: Infinity,
+  gain: 0,
+  sample: null,
+} as Clip;
 const audioContext = new window.AudioContext();
-export default function SampleList({ samples }: { samples: Sample[] }) {
+export default function Clips() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const [currentSample, setCurrentSample] = useState<Sample | null>(null);
+  const [currentClip, setCurrentClip] = useState<Clip>(initClip);
   const [xaxis, setXaxis] = useState<number[]>([]);
   const [dsData, setDsData] = useState<number[]>([]);
-  const url = currentSample?.path
-    ? `http://localhost:3000/${currentSample.path}`
-    : null;
+  const path = currentClip.sample?.path;
+  const url = path ? `http://localhost:3000/${path}` : null;
 
   const play = () => {
     const source = audioContext.createBufferSource();
@@ -76,25 +86,14 @@ export default function SampleList({ samples }: { samples: Sample[] }) {
               acc = 0;
             }
           });
-          console.log(`dsData length: ${dsData.length}`);
           const xaxis = dsData.map((_value, index) => {
             return index / samplesPerSecond;
           });
           setDsData(dsData);
           setXaxis(xaxis);
-          console.log(xaxis);
-          console.log(sampleRate);
-          console.log(samplesPerSecond);
-
-          // const audioContext = new window.AudioContext();
-          // const analyzer = audioContext.createAnalyser();
-          // analyzer.fftSize = 2048;
-          // const bufferLength = analyzer.frequencyBinCount;
-          // const dataArray = new Uint8Array(bufferLength);
           const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
           const source = audioContext.createBufferSource();
           source.buffer = audioBuffer;
-          // source.connect(analyzer);
           setAudioBuffer(decodedBuffer);
         } catch (error) {
           console.error("Error loading the audio: ", error);
@@ -112,8 +111,6 @@ export default function SampleList({ samples }: { samples: Sample[] }) {
     const chart = chartRef.current;
 
     if (!chart) return;
-
-    console.log(getRelativePosition(event.nativeEvent, chart));
 
     const position = getRelativePosition(event.nativeEvent, chart);
     overlays.current.push(position);
@@ -142,24 +139,10 @@ export default function SampleList({ samples }: { samples: Sample[] }) {
   );
 
   return (
-    <div className="samplesComponent">
+    <div className="clipsComponent">
       <div className="samplesWrapper">
-        Current Sample: {currentSample ? currentSample.name : "none"}
-        <div className="sampleList">
-          {samples.map((sample) => (
-            <div
-              key={sample.id}
-              className={
-                sample.id === currentSample?.id
-                  ? "sampleListSelected"
-                  : "sampleListItem"
-              }
-              onClick={(e) => setCurrentSample(sample)}
-            >
-              {sample.name}
-            </div>
-          ))}
-        </div>
+        Current Sample: {currentClip.sample ? currentClip.sample.name : "none"}
+        <SampleList {...{ currentClip, setCurrentClip }} />
         <div>
           <Chart
             plugins={[playStartDrawPI]}
