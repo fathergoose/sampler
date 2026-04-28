@@ -13,7 +13,7 @@ export default function ClipEditor({
 }: ClipEditorProps) {
   return arrayBuffer ? (
     <>
-      <Waveform {...{ arrayBuffer, currentClip }} />
+      <Waveform {...{ arrayBuffer, currentClip, setCurrentClip }} />
       <ClipParameters {...{ currentClip, setCurrentClip }} />
     </>
   ) : (

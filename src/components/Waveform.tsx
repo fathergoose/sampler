@@ -3,24 +3,35 @@ import { Chart } from "react-chartjs-2";
 import decode from "audio-decode";
 
 import { precisionRound } from "../utilities/MathHelpers";
-import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  SetStateAction,
+  Dispatch,
+} from "react";
 import { Clip } from "./Clips";
 
 interface DragState {
   isDragging: boolean;
   line: keyof Pick<Clip, "startAt" | "endAt">;
-  // lineX: number;
 }
 interface WaveformProps {
   arrayBuffer: ArrayBuffer;
   currentClip: Clip;
+  setCurrentClip: Dispatch<SetStateAction<Clip>>;
 }
 interface Point {
   x: number;
   y: number;
 }
 
-export default function Waveform({ arrayBuffer, currentClip }: WaveformProps) {
+export default function Waveform({
+  arrayBuffer,
+  currentClip,
+  setCurrentClip,
+}: WaveformProps) {
   const sampleRate = 44_100;
   const downsampleFactor = 100;
   const chartRef = useRef<ChartJS>(null);
@@ -32,12 +43,10 @@ export default function Waveform({ arrayBuffer, currentClip }: WaveformProps) {
   const overlays = useRef<{ startX: number; endX: number } | null>(null);
   const [chartData, setChartData] = useState<Point[]>([]);
 
-  // Mirrors the currentClip prop into a ref so the plugin can always
-  // read the latest value without needing it as a useMemo dependency
   const currentClipRef = useRef(currentClip);
   useEffect(() => {
     currentClipRef.current = currentClip;
-    chartRef.current?.update(); // ← tell Chart.js to re-run its update cycle
+    chartRef.current?.update();
   }, [currentClip]);
 
   useEffect(() => {
@@ -67,37 +76,49 @@ export default function Waveform({ arrayBuffer, currentClip }: WaveformProps) {
   const playStartDrawPI: Plugin<"line"> = useMemo(
     () => ({
       id: "playStart",
-      beforeEvent: (_chart: ChartJS, args) => {
+      beforeEvent: (chart: ChartJS, args) => {
         const HIT_TOLLERANCE = 5;
 
         const isNear = (a: number, b: number) =>
           Math.abs(a - b) <= HIT_TOLLERANCE;
-        const event = args.event;
+        const { event } = args;
 
-        if (event.type === "mousedown") {
-          if (isNear(event.x ?? 0, overlays.current?.startX ?? -Infinity)) {
-            dragState.current.isDragging = true;
-            dragState.current.line = "startAt";
-          } else if (isNear(event.x ?? 0, overlays.current?.endX ?? Infinity)) {
-            dragState.current.isDragging = true;
-            dragState.current.line = "endAt";
-          }
-        }
-
-        if (event.type === "mouseup") {
-          dragState.current.isDragging = false;
-        }
-
-        if (overlays.current && dragState.current) {
-          if (dragState.current.isDragging && event.type === "mousemove") {
-            if (dragState.current.line === "startAt") {
-              // dragState.current.lineX = event.x ?? 0;
-              overlays.current.startX = event.x ?? 0;
-            } else if (dragState.current.line === "endAt") {
-              // dragState.current.lineX = event.x ?? 0;
-              overlays.current.endX = event.x ?? 0;
+        switch (event.type) {
+          case "mousedown":
+            if (isNear(event.x ?? 0, overlays.current?.startX ?? -Infinity)) {
+              dragState.current.isDragging = true;
+              dragState.current.line = "startAt";
+            } else if (
+              isNear(event.x ?? 0, overlays.current?.endX ?? Infinity)
+            ) {
+              dragState.current.isDragging = true;
+              dragState.current.line = "endAt";
             }
-          }
+            break;
+
+          case "mouseup":
+            if (dragState.current?.isDragging) {
+              const updatedClip = {
+                ...currentClipRef.current,
+                [dragState.current.line]:
+                  chart.scales.x.getValueForPixel(event.x ?? 0) ?? 0,
+              };
+              console.log("updated Clip " + updatedClip);
+              setCurrentClip(updatedClip);
+            }
+            dragState.current.isDragging = false;
+            break;
+
+          case "mousemove":
+            if (overlays.current && dragState.current?.isDragging) {
+              if (dragState.current.line === "startAt") {
+                overlays.current.startX = event.x ?? 0;
+              } else if (dragState.current.line === "endAt") {
+                overlays.current.endX = event.x ?? 0;
+              }
+            }
+            chart.draw();
+            break;
         }
       },
       afterDraw: (chart: ChartJS) => {
@@ -127,7 +148,7 @@ export default function Waveform({ arrayBuffer, currentClip }: WaveformProps) {
         };
       },
     }),
-    [],
+    [setCurrentClip],
   );
 
   return (
