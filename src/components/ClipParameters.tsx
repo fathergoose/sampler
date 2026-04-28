@@ -1,5 +1,5 @@
 import { Clip } from "./Clips";
-import { useEffect, useState } from "react";
+import ParseFloatField from "./ParseFloatField";
 
 interface ClipParametersProps {
   currentClip: Clip;
@@ -10,33 +10,17 @@ export default function ClipParameters({
   currentClip,
   setCurrentClip,
 }: ClipParametersProps) {
-  const [startAt, setStartAt] = useState(currentClip.startAt.toString());
-  const [endAt, setEndAt] = useState(currentClip.endAt.toString());
-  useEffect(() => {
-    setStartAt(currentClip.startAt.toString());
-    setEndAt(currentClip.endAt.toString());
-  }, [currentClip.startAt, currentClip.endAt]);
   return (
     <>
-      <label>Start</label>
-      <input
-        type="text"
-        value={startAt}
-        onChange={(e) => {
-          setStartAt(e.target.value);
-          const val = parseFloat(e.target.value);
-          if (val) setCurrentClip({ ...currentClip, startAt: val });
-        }}
+      <ParseFloatField
+        label="Start"
+        value={currentClip.startAt}
+        onChange={(val) => setCurrentClip({ ...currentClip, startAt: val })}
       />
-      <label>End</label>
-      <input
-        type="text"
-        value={endAt}
-        onChange={(e) => {
-          setEndAt(e.target.value);
-          const val = parseFloat(e.target.value);
-          if (val) setCurrentClip({ ...currentClip, endAt: val });
-        }}
+      <ParseFloatField
+        label="End"
+        value={currentClip.endAt}
+        onChange={(val) => setCurrentClip({ ...currentClip, endAt: val })}
       />
     </>
   );
