@@ -1,86 +1,130 @@
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Legend,
-  Plugin,
-} from "chart.js";
+import { Chart as ChartJS, Plugin } from "chart.js";
 import { Chart } from "react-chartjs-2";
 import decode from "audio-decode";
 
-import { getRelativePosition } from "chart.js/helpers";
 import { precisionRound } from "../utilities/MathHelpers";
-import { useEffect, useMemo, useState, useRef, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { Clip } from "./Clips";
 
-export default function Waveform({
-  arrayBuffer,
-}: {
+interface DragState {
+  isDragging: boolean;
+  line: keyof Pick<Clip, "startAt" | "endAt">;
+  // lineX: number;
+}
+interface WaveformProps {
   arrayBuffer: ArrayBuffer;
-}) {
+  currentClip: Clip;
+}
+interface Point {
+  x: number;
+  y: number;
+}
+
+export default function Waveform({ arrayBuffer, currentClip }: WaveformProps) {
+  const sampleRate = 44_100;
+  const downsampleFactor = 100;
   const chartRef = useRef<ChartJS>(null);
-  const overlays = useRef<{ x: number; y: number }[]>([]);
-  const [xaxis, setXaxis] = useState<number[]>([]);
-  const [dsData, setDsData] = useState<number[]>([]);
+  const dragState = useRef<DragState>({
+    isDragging: false,
+    // lineX: 0,
+    line: "startAt",
+  });
+  const overlays = useRef<{ startX: number; endX: number } | null>(null);
+  const [chartData, setChartData] = useState<Point[]>([]);
+
+  // Mirrors the currentClip prop into a ref so the plugin can always
+  // read the latest value without needing it as a useMemo dependency
+  const currentClipRef = useRef(currentClip);
+  useEffect(() => {
+    currentClipRef.current = currentClip;
+    chartRef.current?.update(); // ← tell Chart.js to re-run its update cycle
+  }, [currentClip]);
 
   useEffect(() => {
     const processData = async () => {
-      console.log(arrayBuffer);
-      let { channelData, sampleRate } = await decode(arrayBuffer);
+      let { channelData } = await decode(arrayBuffer);
       let dsData = [] as number[];
       let acc = 0;
 
-      const downsampleRate = 100;
-      const samplesPerSecond = sampleRate / downsampleRate;
+      const samplesPerSecond = sampleRate / downsampleFactor;
       channelData[0].forEach((val, idx) => {
         acc += Math.abs(val);
-        if ((idx + 1) % downsampleRate === 0) {
-          dsData.push(acc / downsampleRate);
+        if ((idx + 1) % downsampleFactor === 0) {
+          dsData.push(acc / downsampleFactor);
           acc = 0;
         }
       });
-      const xaxis = dsData.map((_value, index) => {
-        return index / samplesPerSecond;
-      });
-      console.log("xaxiz: " + xaxis);
-      setDsData(dsData);
-      setXaxis(xaxis);
+      setChartData(
+        dsData.map((value, index) => ({
+          x: index / samplesPerSecond,
+          y: value,
+        })),
+      );
     };
     processData();
   }, [arrayBuffer]);
 
-  const onClick = (event: MouseEvent<HTMLCanvasElement>) => {
-    const chart = chartRef.current;
-
-    if (!chart) return;
-
-    const position = getRelativePosition(event.nativeEvent, chart);
-    const xValue = chart.scales.x.getLabelForValue(
-      chart.scales.x.getValueForPixel(position.x) ?? 0,
-    );
-    console.log(`time: ${xValue}`);
-    overlays.current.push(position);
-    chart.draw();
-  };
-
   const playStartDrawPI: Plugin<"line"> = useMemo(
     () => ({
       id: "playStart",
+      beforeEvent: (_chart: ChartJS, args) => {
+        const HIT_TOLLERANCE = 5;
+
+        const isNear = (a: number, b: number) =>
+          Math.abs(a - b) <= HIT_TOLLERANCE;
+        const event = args.event;
+
+        if (event.type === "mousedown") {
+          if (isNear(event.x ?? 0, overlays.current?.startX ?? -Infinity)) {
+            dragState.current.isDragging = true;
+            dragState.current.line = "startAt";
+          } else if (isNear(event.x ?? 0, overlays.current?.endX ?? Infinity)) {
+            dragState.current.isDragging = true;
+            dragState.current.line = "endAt";
+          }
+        }
+
+        if (event.type === "mouseup") {
+          dragState.current.isDragging = false;
+        }
+
+        if (overlays.current && dragState.current) {
+          if (dragState.current.isDragging && event.type === "mousemove") {
+            if (dragState.current.line === "startAt") {
+              // dragState.current.lineX = event.x ?? 0;
+              overlays.current.startX = event.x ?? 0;
+            } else if (dragState.current.line === "endAt") {
+              // dragState.current.lineX = event.x ?? 0;
+              overlays.current.endX = event.x ?? 0;
+            }
+          }
+        }
+      },
       afterDraw: (chart: ChartJS) => {
         const { top, bottom } = chart.chartArea;
         const ctx = chart.ctx;
-
-        overlays.current.forEach(({ x, y: _y }) => {
+        const drawLine = (x: number | undefined) => {
+          if (!x) return;
           ctx.save();
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(x, top);
           ctx.lineTo(x, bottom);
           ctx.stroke();
-          // ctx.restore();
-        });
+          ctx.restore();
+        };
+        drawLine(overlays.current?.startX);
+        drawLine(overlays.current?.endX);
+      },
+      afterUpdate: (chart) => {
+        if (!chart.scales?.x) return;
+        const { startAt, endAt } = currentClipRef.current;
+        const startX = chart.scales.x.getPixelForValue(startAt);
+        const endX = chart.scales.x.getPixelForValue(endAt);
+        overlays.current = {
+          startX,
+          endX,
+        };
       },
     }),
     [],
@@ -92,24 +136,28 @@ export default function Waveform({
         plugins={[playStartDrawPI]}
         type="line"
         ref={chartRef}
-        onClick={onClick}
         options={{
+          events: [
+            "mousemove",
+            "mouseout",
+            "click",
+            "touchstart",
+            "touchmove",
+            "touchend",
+            "mousedown",
+            "mouseup",
+          ],
           scales: {
             x: {
+              type: "linear",
               ticks: {
-                callback: function (val, _index) {
-                  return precisionRound(
-                    this.getLabelForValue(val as number),
-                    2,
-                  );
-                },
+                callback: (val) => precisionRound(val as number, 2),
               },
             },
           },
         }}
         data={{
-          labels: xaxis,
-          datasets: [{ label: "sample", data: dsData, pointStyle: false }],
+          datasets: [{ label: "sample", data: chartData, pointStyle: false }],
         }}
       />
     </div>

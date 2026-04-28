@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, type MouseEvent } from "react";
+import { useEffect, useState } from "react";
 import "./Clips.css";
 import SampleList from "./SampleList";
 import Control from "./Control";
@@ -10,12 +10,8 @@ import {
   LineElement,
   Title,
   Legend,
-  Plugin,
 } from "chart.js";
-import { Chart } from "react-chartjs-2";
 
-import { getRelativePosition } from "chart.js/helpers";
-import { precisionRound } from "../utilities/MathHelpers";
 import ClipEditor from "./ClipEditor";
 
 ChartJS.register(
@@ -46,8 +42,8 @@ export interface Clip {
 const initClip = {
   id: 1,
   name: "Kick 808",
-  startAt: 0,
-  endAt: Infinity,
+  startAt: 0.1,
+  endAt: 0.3,
   gain: 0,
   sample: null,
 } as Clip;
@@ -68,8 +64,8 @@ export default function Clips() {
   };
 
   useEffect(() => {
-    console.log(arrayBuffer);
-  }, [arrayBuffer]);
+    console.log(currentClip);
+  }, [currentClip]);
 
   useEffect(() => {
     const loadAudio = async () => {
@@ -94,7 +90,7 @@ export default function Clips() {
       <div className="samplesWrapper">
         Current Sample: {currentClip.sample ? currentClip.sample.name : "none"}
         <SampleList {...{ currentClip, setCurrentClip }} />
-        <ClipEditor arrayBuffer={arrayBuffer} />
+        <ClipEditor {...{ arrayBuffer, currentClip, setCurrentClip }} />
         <div className="player">
           Audio loaded: {audioBuffer ? <Control handleClick={play} /> : "No"}
         </div>

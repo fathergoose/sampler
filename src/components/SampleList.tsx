@@ -2,12 +2,15 @@ import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { Clip, Sample } from "./Clips";
 import "./Clips.css";
 
-interface SampleListParams {
+interface SampleListProps {
   currentClip: Clip;
   setCurrentClip: Dispatch<SetStateAction<Clip>>;
 }
 
-export default function ({ currentClip, setCurrentClip }: SampleListParams) {
+export default function SampleList({
+  currentClip,
+  setCurrentClip,
+}: SampleListProps) {
   const [samples, setSamples] = useState<Sample[]>([]);
 
   useEffect(() => {
