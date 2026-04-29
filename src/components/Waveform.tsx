@@ -5,7 +5,6 @@ import { Chart } from "react-chartjs-2";
 
 import {
   Dispatch,
-  RefObject,
   SetStateAction,
   useEffect,
   useMemo,
@@ -13,7 +12,7 @@ import {
   useState,
 } from "react";
 import { precisionRound } from "../utilities/MathHelpers";
-import { Clip, PlayState } from "./Clips";
+import { Clip } from "./Clips";
 
 interface DragState {
   isDragging: boolean;
@@ -23,9 +22,7 @@ interface WaveformProps {
   arrayBuffer: ArrayBuffer;
   currentClip: Clip;
   setCurrentClip: Dispatch<SetStateAction<Clip>>;
-  playState: PlayState;
-  setPlayState: Dispatch<SetStateAction<PlayState>>;
-  chartRef: RefObject<ChartJS | null>;
+  playClip: () => void;
 }
 interface Point {
   x: number;
@@ -36,9 +33,7 @@ export default function Waveform({
   arrayBuffer,
   currentClip,
   setCurrentClip,
-  playState,
-  setPlayState,
-  chartRef,
+  playClip,
 }: WaveformProps) {
   const sampleRate = 44_100;
   const downsampleFactor = 100;
@@ -49,9 +44,10 @@ export default function Waveform({
   const overlays = useRef<{ startX: number; endX: number } | null>(null);
   const [chartData, setChartData] = useState<Point[]>([]);
   const currentClipRef = useRef(currentClip);
-  const sweepX = useRef<number | null>(null);
+  const sweepXRef = useRef<number | null>(null);
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const chartRef = useRef<ChartJS>(null);
 
   useEffect(() => {
     currentClipRef.current = currentClip;
@@ -81,44 +77,6 @@ export default function Waveform({
     };
     processData();
   }, [arrayBuffer]);
-
-  const stopSweep = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    startTimeRef.current = null;
-    sweepX.current = null;
-  };
-  const startPlaybackPositionSweep = () => {
-    const chart = chartRef.current;
-    if (!chart) return;
-
-    const { left, right } = chart.chartArea;
-    // TODO: Change to use real duration
-    const duration = 3000; // ms to sweep
-
-    const animate = (timestamp: number) => {
-      if (!startTimeRef.current) startTimeRef.current = timestamp;
-      const elapsed = timestamp - startTimeRef.current;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Interpolate x position across the chart
-      sweepX.current = left + (right - left) * progress;
-      chart.draw();
-
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        stopSweep();
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-  };
-
-  // Clean up on unmount by running stopSweep()
-  useEffect(() => () => stopSweep(), []);
 
   const startEndMarkersPlugin: Plugin<"line"> = useMemo(
     () => ({
@@ -202,19 +160,58 @@ export default function Waveform({
     [setCurrentClip],
   );
 
+  const stopSweep = () => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    startTimeRef.current = null;
+    sweepXRef.current = null;
+  };
+
+  const startPlaybackPositionSweep = () => {
+    const duration = (currentClip.endAt - currentClip.startAt) * 1_000; // ms to sweep
+
+    const animate = (timestamp: number) => {
+      const chart = chartRef.current;
+      if (!chart) return;
+
+      if (!startTimeRef.current) startTimeRef.current = timestamp;
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Interpolate x position across the chart
+      const startX = chart.scales.x.getPixelForValue(currentClip.startAt);
+      const endX = chart.scales.x.getPixelForValue(currentClip.endAt);
+      sweepXRef.current = startX + progress * (endX - startX);
+      chart.draw();
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        stopSweep();
+      }
+    };
+
+    playClip();
+    animationRef.current = requestAnimationFrame(animate);
+  };
+
+  // Clean up on unmount by running stopSweep()
+  useEffect(() => () => stopSweep(), []);
   const animatePlaybackPlugin: Plugin<"line"> = useMemo(
     () => ({
       id: "playback",
       afterDraw: (chart) => {
-        if (sweepX.current === null) return;
+        if (sweepXRef.current === null) return;
 
         const { ctx } = chart;
         const { top, bottom } = chart.chartArea;
         ctx.save();
 
         ctx.beginPath();
-        ctx.moveTo(sweepX.current, top);
-        ctx.lineTo(sweepX.current, bottom);
+        ctx.moveTo(sweepXRef.current, top);
+        ctx.lineTo(sweepXRef.current, bottom);
         ctx.strokeStyle = "red";
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -245,7 +242,7 @@ export default function Waveform({
           datasets: [{ label: "sample", data: chartData, pointStyle: false }],
         }}
       />
-      <button onClick={startPlaybackPositionSweep}>Start</button>
+      <button onClick={startPlaybackPositionSweep}>Play</button>
     </div>
   );
 }

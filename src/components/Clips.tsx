@@ -1,7 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import "./Clips.css";
 import SampleList from "./SampleList";
-import Control from "./Control";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -63,12 +62,10 @@ export default function Clips() {
     playHead: 0,
   });
 
-  const chartRef = useRef<ChartJS>(null);
-
   const path = currentClip.sample?.path;
   const url = path ? `http://localhost:3000/${path}` : null;
 
-  const play = () => {
+  const playClip = () => {
     // Trigger a play scrubber on the chart from here
     // I think I do this by passing a ref down?
     // Or lift the state up
@@ -113,12 +110,12 @@ export default function Clips() {
             setCurrentClip,
             playState,
             setPlayState,
-            chartRef,
+            playClip,
           }}
         />
-        <div className="player">
-          Audio loaded: {audioBuffer ? <Control handleClick={play} /> : "No"}
-        </div>
+        {/* <div className="player"> */}
+        {/*   Audio loaded: {audioBuffer ? <Control handleClick={play} /> : "No"} */}
+        {/* </div> */}
       </div>
     </div>
   );

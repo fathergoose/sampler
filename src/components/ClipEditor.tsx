@@ -2,14 +2,21 @@ import Waveform from "./Waveform";
 import ClipParameters from "./ClipParameters";
 import { Clip, PlayState } from "./Clips";
 import { Chart as ChartJS } from "chart.js";
-import { Dispatch, Ref, RefObject, SetStateAction } from "react";
+import {
+  Dispatch,
+  Ref,
+  RefObject,
+  SetStateAction,
+  useEffect,
+  useRef,
+} from "react";
 interface ClipEditorProps {
   arrayBuffer: ArrayBuffer | null;
   currentClip: Clip;
   setCurrentClip: Dispatch<SetStateAction<Clip>>;
   playState: PlayState;
   setPlayState: Dispatch<SetStateAction<PlayState>>;
-  chartRef: RefObject<ChartJS | null>;
+  playClip: () => void;
 }
 export default function ClipEditor({
   arrayBuffer,
@@ -17,7 +24,7 @@ export default function ClipEditor({
   setCurrentClip,
   playState,
   setPlayState,
-  chartRef,
+  playClip,
 }: ClipEditorProps) {
   return arrayBuffer ? (
     <>
@@ -28,7 +35,7 @@ export default function ClipEditor({
           setCurrentClip,
           playState,
           setPlayState,
-          chartRef,
+          playClip,
         }}
       />
       <ClipParameters {...{ currentClip, setCurrentClip }} />
