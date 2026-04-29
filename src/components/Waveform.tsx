@@ -41,7 +41,7 @@ export default function Waveform({
     isDragging: false,
     line: "startAt",
   });
-  const overlays = useRef<{ startX: number; endX: number } | null>(null);
+  const overlays = useRef<{ startAt: number; endAt: number } | null>(null);
   const [chartData, setChartData] = useState<Point[]>([]);
   const currentClipRef = useRef(currentClip);
   const sweepXRef = useRef<number | null>(null);
@@ -80,21 +80,22 @@ export default function Waveform({
 
   const startEndMarkersPlugin: Plugin<"line"> = useMemo(
     () => ({
-      id: "playStart",
+      id: "startend",
       beforeEvent: (chart: ChartJS, args) => {
         const HIT_TOLLERANCE = 5;
 
         const isNear = (a: number, b: number) =>
           Math.abs(a - b) <= HIT_TOLLERANCE;
         const { event } = args;
+        const { left, right } = chart.chartArea;
 
         switch (event.type) {
           case "mousedown":
-            if (isNear(event.x ?? 0, overlays.current?.startX ?? -Infinity)) {
+            if (isNear(event.x ?? 0, overlays.current?.startAt ?? -Infinity)) {
               dragState.current.isDragging = true;
               dragState.current.line = "startAt";
             } else if (
-              isNear(event.x ?? 0, overlays.current?.endX ?? Infinity)
+              isNear(event.x ?? 0, overlays.current?.endAt ?? Infinity)
             ) {
               dragState.current.isDragging = true;
               dragState.current.line = "endAt";
@@ -105,25 +106,32 @@ export default function Waveform({
           case "mouseout":
             if (!dragState.current.isDragging) break;
           case "mouseup":
-            if (dragState.current?.isDragging) {
+            if (dragState.current?.isDragging && event.x && overlays.current) {
               const updatedClip = {
                 ...currentClipRef.current,
                 [dragState.current.line]:
-                  chart.scales.x.getValueForPixel(event.x ?? 0) ?? 0,
+                  chart.scales.x.getValueForPixel(
+                    overlays.current[dragState.current.line],
+                  ) ?? 0,
               };
-              console.log("updated Clip " + updatedClip);
+              console.log("updated Clip " + JSON.stringify(updatedClip));
               setCurrentClip(updatedClip);
             }
             dragState.current.isDragging = false;
             break;
 
-          //BUG: disallow dragging to invalid values
           case "mousemove":
-            if (overlays.current && dragState.current?.isDragging) {
+            if (overlays.current && dragState.current?.isDragging && event.x) {
               if (dragState.current.line === "startAt") {
-                overlays.current.startX = event.x ?? 0;
+                if (overlays.current.endAt > event.x) {
+                  overlays.current.startAt =
+                    event.x <= left ? left : event.x >= right ? right : event.x;
+                }
               } else if (dragState.current.line === "endAt") {
-                overlays.current.endX = event.x ?? 0;
+                if (overlays.current.startAt < event.x) {
+                  overlays.current.endAt =
+                    event.x <= left ? left : event.x >= right ? right : event.x;
+                }
               }
             }
             chart.draw();
@@ -143,8 +151,8 @@ export default function Waveform({
           ctx.stroke();
           ctx.restore();
         };
-        drawLine(overlays.current?.startX);
-        drawLine(overlays.current?.endX);
+        drawLine(overlays.current?.startAt);
+        drawLine(overlays.current?.endAt);
       },
       afterUpdate: (chart) => {
         if (!chart.scales?.x) return;
@@ -152,8 +160,8 @@ export default function Waveform({
         const startX = chart.scales.x.getPixelForValue(startAt);
         const endX = chart.scales.x.getPixelForValue(endAt);
         overlays.current = {
-          startX,
-          endX,
+          startAt: startX,
+          endAt: endX,
         };
       },
     }),
