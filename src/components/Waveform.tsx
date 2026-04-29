@@ -1,17 +1,19 @@
+/* eslint-disable no-fallthrough */
+import decode from "audio-decode";
 import { Chart as ChartJS, Plugin } from "chart.js";
 import { Chart } from "react-chartjs-2";
-import decode from "audio-decode";
 
-import { precisionRound } from "../utilities/MathHelpers";
 import {
+  Dispatch,
+  RefObject,
+  SetStateAction,
   useEffect,
   useMemo,
-  useState,
   useRef,
-  SetStateAction,
-  Dispatch,
+  useState,
 } from "react";
-import { Clip } from "./Clips";
+import { precisionRound } from "../utilities/MathHelpers";
+import { Clip, PlayState } from "./Clips";
 
 interface DragState {
   isDragging: boolean;
@@ -21,6 +23,9 @@ interface WaveformProps {
   arrayBuffer: ArrayBuffer;
   currentClip: Clip;
   setCurrentClip: Dispatch<SetStateAction<Clip>>;
+  playState: PlayState;
+  setPlayState: Dispatch<SetStateAction<PlayState>>;
+  chartRef: RefObject<ChartJS | null>;
 }
 interface Point {
   x: number;
@@ -31,22 +36,26 @@ export default function Waveform({
   arrayBuffer,
   currentClip,
   setCurrentClip,
+  playState,
+  setPlayState,
+  chartRef,
 }: WaveformProps) {
   const sampleRate = 44_100;
   const downsampleFactor = 100;
-  const chartRef = useRef<ChartJS>(null);
   const dragState = useRef<DragState>({
     isDragging: false,
-    // lineX: 0,
     line: "startAt",
   });
   const overlays = useRef<{ startX: number; endX: number } | null>(null);
   const [chartData, setChartData] = useState<Point[]>([]);
-
   const currentClipRef = useRef(currentClip);
+  const sweepX = useRef<number | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
   useEffect(() => {
     currentClipRef.current = currentClip;
-    chartRef.current?.update();
+    if (chartRef?.current) chartRef.current?.update();
   }, [currentClip]);
 
   useEffect(() => {
@@ -73,7 +82,45 @@ export default function Waveform({
     processData();
   }, [arrayBuffer]);
 
-  const playStartDrawPI: Plugin<"line"> = useMemo(
+  const stopSweep = () => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    startTimeRef.current = null;
+    sweepX.current = null;
+  };
+  const startPlaybackPositionSweep = () => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const { left, right } = chart.chartArea;
+    // TODO: Change to use real duration
+    const duration = 3000; // ms to sweep
+
+    const animate = (timestamp: number) => {
+      if (!startTimeRef.current) startTimeRef.current = timestamp;
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Interpolate x position across the chart
+      sweepX.current = left + (right - left) * progress;
+      chart.draw();
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        stopSweep();
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+  };
+
+  // Clean up on unmount by running stopSweep()
+  useEffect(() => () => stopSweep(), []);
+
+  const startEndMarkersPlugin: Plugin<"line"> = useMemo(
     () => ({
       id: "playStart",
       beforeEvent: (chart: ChartJS, args) => {
@@ -96,6 +143,9 @@ export default function Waveform({
             }
             break;
 
+          // @ts-ignore
+          case "mouseout":
+            if (!dragState.current.isDragging) break;
           case "mouseup":
             if (dragState.current?.isDragging) {
               const updatedClip = {
@@ -109,6 +159,7 @@ export default function Waveform({
             dragState.current.isDragging = false;
             break;
 
+          //BUG: disallow dragging to invalid values
           case "mousemove":
             if (overlays.current && dragState.current?.isDragging) {
               if (dragState.current.line === "startAt") {
@@ -151,23 +202,36 @@ export default function Waveform({
     [setCurrentClip],
   );
 
+  const animatePlaybackPlugin: Plugin<"line"> = useMemo(
+    () => ({
+      id: "playback",
+      afterDraw: (chart) => {
+        if (sweepX.current === null) return;
+
+        const { ctx } = chart;
+        const { top, bottom } = chart.chartArea;
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.moveTo(sweepX.current, top);
+        ctx.lineTo(sweepX.current, bottom);
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      },
+    }),
+    [],
+  );
+
   return (
     <div>
       <Chart
-        plugins={[playStartDrawPI]}
+        plugins={[startEndMarkersPlugin, animatePlaybackPlugin]}
         type="line"
         ref={chartRef}
         options={{
-          events: [
-            "mousemove",
-            "mouseout",
-            "click",
-            "touchstart",
-            "touchmove",
-            "touchend",
-            "mousedown",
-            "mouseup",
-          ],
+          events: ["mousemove", "mousedown", "mouseup", "mouseout"],
           scales: {
             x: {
               type: "linear",
@@ -181,6 +245,7 @@ export default function Waveform({
           datasets: [{ label: "sample", data: chartData, pointStyle: false }],
         }}
       />
+      <button onClick={startPlaybackPositionSweep}>Start</button>
     </div>
   );
 }

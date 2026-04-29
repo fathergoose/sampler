@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./Clips.css";
 import SampleList from "./SampleList";
 import Control from "./Control";
@@ -39,6 +39,11 @@ export interface Clip {
   gain: number;
   sample: Sample | null;
 }
+
+export interface PlayState {
+  isPlaying: boolean;
+  playHead: number;
+}
 const initClip = {
   id: 1,
   name: "Kick 808",
@@ -52,15 +57,26 @@ export default function Clips() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [currentClip, setCurrentClip] = useState<Clip>(initClip);
+  // TODO: what units is playPosition in?
+  const [playState, setPlayState] = useState({
+    isPlaying: false,
+    playHead: 0,
+  });
+
+  const chartRef = useRef<ChartJS>(null);
+
   const path = currentClip.sample?.path;
   const url = path ? `http://localhost:3000/${path}` : null;
 
   const play = () => {
+    // Trigger a play scrubber on the chart from here
+    // I think I do this by passing a ref down?
+    // Or lift the state up
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
     source.loop = false;
-    source.start();
+    source.start(0, currentClip.startAt, currentClip.endAt);
   };
 
   useEffect(() => {
@@ -90,7 +106,16 @@ export default function Clips() {
       <div className="samplesWrapper">
         Current Sample: {currentClip.sample ? currentClip.sample.name : "none"}
         <SampleList {...{ currentClip, setCurrentClip }} />
-        <ClipEditor {...{ arrayBuffer, currentClip, setCurrentClip }} />
+        <ClipEditor
+          {...{
+            arrayBuffer,
+            currentClip,
+            setCurrentClip,
+            playState,
+            setPlayState,
+            chartRef,
+          }}
+        />
         <div className="player">
           Audio loaded: {audioBuffer ? <Control handleClick={play} /> : "No"}
         </div>

@@ -1,19 +1,36 @@
 import Waveform from "./Waveform";
 import ClipParameters from "./ClipParameters";
-import { Clip } from "./Clips";
+import { Clip, PlayState } from "./Clips";
+import { Chart as ChartJS } from "chart.js";
+import { Dispatch, Ref, RefObject, SetStateAction } from "react";
 interface ClipEditorProps {
   arrayBuffer: ArrayBuffer | null;
   currentClip: Clip;
-  setCurrentClip: React.Dispatch<React.SetStateAction<Clip>>;
+  setCurrentClip: Dispatch<SetStateAction<Clip>>;
+  playState: PlayState;
+  setPlayState: Dispatch<SetStateAction<PlayState>>;
+  chartRef: RefObject<ChartJS | null>;
 }
 export default function ClipEditor({
   arrayBuffer,
   currentClip,
   setCurrentClip,
+  playState,
+  setPlayState,
+  chartRef,
 }: ClipEditorProps) {
   return arrayBuffer ? (
     <>
-      <Waveform {...{ arrayBuffer, currentClip, setCurrentClip }} />
+      <Waveform
+        {...{
+          arrayBuffer,
+          currentClip,
+          setCurrentClip,
+          playState,
+          setPlayState,
+          chartRef,
+        }}
+      />
       <ClipParameters {...{ currentClip, setCurrentClip }} />
     </>
   ) : (
