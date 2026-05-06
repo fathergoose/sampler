@@ -2,6 +2,7 @@ import Waveform from "./Waveform";
 import ClipParameters from "./ClipParameters";
 import { Clip } from "./Clips";
 import { Dispatch, SetStateAction } from "react";
+import ClipList from "./ClipList";
 interface ClipEditorProps {
   arrayBuffer: ArrayBuffer | null;
   currentClip: Clip;
@@ -16,6 +17,7 @@ export default function ClipEditor({
 }: ClipEditorProps) {
   return arrayBuffer ? (
     <>
+      <ClipList />
       <Waveform
         {...{
           arrayBuffer,

@@ -61,9 +61,6 @@ export default function Clips() {
   const url = path ? `/${path}` : null;
 
   const playClip = () => {
-    // Trigger a play scrubber on the chart from here
-    // I think I do this by passing a ref down?
-    // Or lift the state up
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
