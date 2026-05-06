@@ -6,7 +6,6 @@ interface Point {
   y: number;
 }
 
-const SAMPLE_RATE = 44_100;
 const DOWNSAMPLE_FACTOR = 100;
 
 export function useAudioData(arrayBuffer: ArrayBuffer) {
@@ -14,8 +13,8 @@ export function useAudioData(arrayBuffer: ArrayBuffer) {
 
   useEffect(() => {
     const processData = async () => {
-      const { channelData } = await decode(arrayBuffer);
-      const samplesPerSecond = SAMPLE_RATE / DOWNSAMPLE_FACTOR;
+      const { channelData, sampleRate } = await decode(arrayBuffer);
+      const samplesPerSecond = sampleRate / DOWNSAMPLE_FACTOR;
       const dsData: number[] = [];
       let acc = 0;
 

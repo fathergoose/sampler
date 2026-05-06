@@ -15,7 +15,7 @@ export default function SampleList({
 
   useEffect(() => {
     const getSamples = async () => {
-      const result = await fetch("http://localhost:3000/api/samples/all");
+      const result = await fetch("/api/samples/all");
       const body = await result.json();
       setSamples(body);
     };

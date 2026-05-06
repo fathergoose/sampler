@@ -56,14 +56,9 @@ export default function Clips() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [currentClip, setCurrentClip] = useState<Clip>(initClip);
-  // TODO: what units is playPosition in?
-  const [playState, setPlayState] = useState({
-    isPlaying: false,
-    playHead: 0,
-  });
 
   const path = currentClip.sample?.path;
-  const url = path ? `http://localhost:3000/${path}` : null;
+  const url = path ? `/${path}` : null;
 
   const playClip = () => {
     // Trigger a play scrubber on the chart from here
@@ -108,8 +103,6 @@ export default function Clips() {
             arrayBuffer,
             currentClip,
             setCurrentClip,
-            playState,
-            setPlayState,
             playClip,
           }}
         />
