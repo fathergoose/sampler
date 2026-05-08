@@ -1,16 +1,36 @@
 .clipsComponent {
-  display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .samplesWrapper {
-  columns: 2;
+  display: flex;
+}
+.samplesWrapper div {
+  flex-grow: 1;
+}
+
+.clipList {
+  flex-basis: 33%;
+}
+
+.clipEditor {
+  flex-basis: 67%;
+  display: flex;
+}
+
+.clipEditor div {
+  flex-grow: 1;
 }
 
 .sampleList {
   height: 20em;
 }
 
-.sampleListSelected {
+.listSelected {
   border: 1px solid blue;
 }
+
+/* .chartWrapper { */
+/*   aspect-ratio: 2/1; */
+/* } */

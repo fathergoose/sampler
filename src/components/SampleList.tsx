@@ -3,13 +3,13 @@ import { Clip, Sample } from "./Clips";
 import "./Clips.css";
 
 interface SampleListProps {
-  currentClip: Clip;
-  setCurrentClip: Dispatch<SetStateAction<Clip>>;
+  currentClip: Clip | null;
+  patchClip: (updates: Partial<Clip>) => Promise<void>;
 }
 
 export default function SampleList({
   currentClip,
-  setCurrentClip,
+  patchClip,
 }: SampleListProps) {
   const [samples, setSamples] = useState<Sample[]>([]);
 
@@ -26,20 +26,23 @@ export default function SampleList({
   }, []);
 
   return (
-    <div className="sampleList">
-      {samples?.map((sample) => (
-        <div
-          key={sample.id}
-          className={
-            sample.id === currentClip.sample?.id
-              ? "sampleListSelected"
-              : "sampleListItem"
-          }
-          onClick={() => setCurrentClip({ ...currentClip, sample })}
-        >
-          {sample.name}
-        </div>
-      ))}
-    </div>
+    <>
+      <h1>Samples</h1>
+      <div className="sampleList">
+        {samples?.map((sample) => (
+          <div
+            key={sample.id}
+            className={
+              sample.id === currentClip?.sample?.id
+                ? "listSelected"
+                : "listItem"
+            }
+            onClick={() => currentClip && patchClip({ ...currentClip, sample })}
+          >
+            {sample.name}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

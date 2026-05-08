@@ -10,14 +10,14 @@ import { usePlaybackSweep } from "../hooks/usePlaybackProgress";
 interface WaveformProps {
   arrayBuffer: ArrayBuffer;
   currentClip: Clip;
-  setCurrentClip: Dispatch<SetStateAction<Clip>>;
+  patchClip: (updates: Partial<Clip>) => Promise<void>;
   playClip: () => void;
 }
 
 export default function Waveform({
   arrayBuffer,
   currentClip,
-  setCurrentClip,
+  patchClip,
   playClip,
 }: WaveformProps) {
   const chartRef = useRef<ChartJS>(null);
@@ -29,7 +29,7 @@ export default function Waveform({
   }, [currentClip]);
 
   const chartData = useAudioData(arrayBuffer);
-  const markersPlugin = useStartEndMarkers(currentClipRef, setCurrentClip);
+  const markersPlugin = useStartEndMarkers(currentClipRef, patchClip);
   const { plugin: sweepPlugin, start: startSweep } = usePlaybackSweep(chartRef);
 
   return (
@@ -53,6 +53,7 @@ export default function Waveform({
       />
       <button
         onClick={() =>
+          currentClip?.sample &&
           startSweep(currentClip.startAt, currentClip.endAt, playClip)
         }
       >

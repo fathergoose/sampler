@@ -1,5 +1,5 @@
 import { Chart as ChartJS, Plugin } from "chart.js";
-import { Dispatch, RefObject, SetStateAction, useMemo, useRef } from "react";
+import { RefObject, useMemo, useRef } from "react";
 import { Clip } from "../components/Clips";
 
 interface DragState {
@@ -22,7 +22,7 @@ const clamp = (value: number, min: number, max: number) =>
 
 export function useStartEndMarkers(
   currentClipRef: RefObject<Clip>,
-  setCurrentClip: Dispatch<SetStateAction<Clip>>,
+  patchClip: (updates: Partial<Clip>) => Promise<void>,
 ): Plugin<"line"> {
   const dragState = useRef<DragState>({ isDragging: false, line: "startAt" });
   const overlays = useRef<MarkerOverlays | null>(null);
@@ -62,8 +62,7 @@ export function useStartEndMarkers(
           case "mouseup":
             if (dragState.current.isDragging && overlays.current) {
               const pixelValue = overlays.current[dragState.current.line];
-              setCurrentClip({
-                ...currentClipRef.current,
+              patchClip({
                 [dragState.current.line]:
                   chart.scales.x.getValueForPixel(pixelValue) ?? 0,
               });
@@ -106,6 +105,6 @@ export function useStartEndMarkers(
         drawLine(overlays.current.endAt);
       },
     }),
-    [currentClipRef, setCurrentClip],
+    [currentClipRef, patchClip],
   );
 }

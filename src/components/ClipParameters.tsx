@@ -2,25 +2,30 @@ import { Clip } from "./Clips";
 import ParseFloatField from "./ParseFloatField";
 
 interface ClipParametersProps {
-  currentClip: Clip;
-  setCurrentClip: React.Dispatch<React.SetStateAction<Clip>>;
+  currentClip: Clip | null;
+  patchClip: (updates: Partial<Clip>) => Promise<void>;
 }
 
 export default function ClipParameters({
   currentClip,
-  setCurrentClip,
+  patchClip,
 }: ClipParametersProps) {
   return (
     <>
       <ParseFloatField
         label="Start"
-        value={currentClip.startAt}
-        onChange={(val) => setCurrentClip({ ...currentClip, startAt: val })}
+        value={currentClip?.startAt ?? 0}
+        onChange={(val) => patchClip({ startAt: val })}
       />
       <ParseFloatField
         label="End"
-        value={currentClip.endAt}
-        onChange={(val) => setCurrentClip({ ...currentClip, endAt: val })}
+        value={currentClip?.endAt ?? 0}
+        onChange={(val) => patchClip({ endAt: val })}
+      />
+      <ParseFloatField
+        label="Gain"
+        value={currentClip?.gain ?? 0}
+        onChange={(val) => patchClip({ gain: val })}
       />
     </>
   );

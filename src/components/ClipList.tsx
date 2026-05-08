@@ -1,29 +1,49 @@
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import { Clip } from "./Clips";
 
-export default function ClipList() {
-  const [clips, setClips] = useState<Clip[]>();
+interface ClipProps {
+  clipList: Clip[];
+  setClipList: Dispatch<SetStateAction<Clip[]>>;
+  currentClip: Clip | null;
+  setCurrentClip: Dispatch<SetStateAction<Clip>>;
+}
+export default function ClipList({
+  clipList,
+  setClipList,
+  currentClip,
+  setCurrentClip,
+}: ClipProps) {
   useEffect(() => {
     const getClips = async () => {
       const result = await fetch("/api/clips/all");
       const body = await result.json();
-      setClips(body);
+      console.log(body);
+      setClipList(body);
     };
     getClips();
     return () => {
       return;
     };
-  }, []);
+  }, [setClipList]);
 
   return (
-    <div>
-      {clips && clips.length > 0
-        ? clips?.map((clip) => (
-            <div key={clip.id}>
-              {clip.name}, {clip.startAt}, {clip.endAt}, {clip.gain}
-            </div>
-          ))
-        : "No Clips loaded"}
-    </div>
+    <>
+      <h1>Clips</h1>
+      <div className="clipList">
+        {clipList.length > 0
+          ? clipList?.map((clip) => (
+              <div
+                className={
+                  clip.id === currentClip?.id ? "listSelected" : "listItem"
+                }
+                key={clip.id}
+                onClick={() => setCurrentClip(clip)}
+              >
+                {clip.name}:{clip.sample?.name}
+              </div>
+            ))
+          : "No Clips loaded"}
+      </div>
+    </>
   );
 }

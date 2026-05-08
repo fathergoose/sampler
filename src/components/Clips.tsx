@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "./Clips.css";
-import SampleList from "./SampleList";
+import ClipList from "./ClipList";
+import useInitialNullState from "../hooks/useInitialNullState";
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,6 +14,7 @@ import {
 } from "chart.js";
 
 import ClipEditor from "./ClipEditor";
+import useDebouncedClipPatch from "../hooks/useDebouncedClipPatch";
 
 ChartJS.register(
   CategoryScale,
@@ -43,40 +46,33 @@ export interface PlayState {
   isPlaying: boolean;
   playHead: number;
 }
-const initClip = {
-  id: 1,
-  name: "Kick 808",
-  startAt: 0.1,
-  endAt: 0.3,
-  gain: 0,
-  sample: null,
-} as Clip;
+
 const audioContext = new window.AudioContext();
+
 export default function Clips() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
-  const [currentClip, setCurrentClip] = useState<Clip>(initClip);
+  const [clipList, setClipList] = useState<Clip[]>([]);
+  const [currentClip, setCurrentClip] = useInitialNullState<Clip>();
 
-  const path = currentClip.sample?.path;
-  const url = path ? `/${path}` : null;
+  const path = currentClip && currentClip.sample?.path;
+  const fileUrl = path ? `/${path}` : null;
 
   const playClip = () => {
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    source.loop = false;
-    source.start(0, currentClip.startAt, currentClip.endAt);
+    if (currentClip) {
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.loop = false;
+      source.start(0, currentClip.startAt, currentClip.endAt);
+    }
   };
 
   useEffect(() => {
-    console.log(currentClip);
-  }, [currentClip]);
-
-  useEffect(() => {
     const loadAudio = async () => {
-      if (url) {
+      if (fileUrl) {
         try {
-          const response = await fetch(url);
+          const response = await fetch(fileUrl);
           const ab = await response.arrayBuffer();
           setArrayBuffer(ab);
           const decodedBuffer = await audioContext.decodeAudioData(ab.slice(0));
@@ -88,24 +84,46 @@ export default function Clips() {
     };
 
     loadAudio();
-  }, [url]);
+  }, [fileUrl]);
+
+  const { queue: queuePatch } = useDebouncedClipPatch(currentClip?.id);
+
+  const patchClip = async (updates: Partial<Clip>): Promise<void> => {
+    if (currentClip) {
+      setCurrentClip((prev): Clip => (prev ? { ...prev, ...updates } : prev));
+      setClipList(
+        clipList.map((clip) =>
+          clip.id === currentClip.id ? { ...currentClip, ...updates } : clip,
+        ),
+      );
+      queuePatch(updates);
+    }
+  };
 
   return (
     <div className="clipsComponent">
       <div className="samplesWrapper">
-        Current Sample: {currentClip.sample ? currentClip.sample.name : "none"}
-        <SampleList {...{ currentClip, setCurrentClip }} />
-        <ClipEditor
-          {...{
-            arrayBuffer,
-            currentClip,
-            setCurrentClip,
-            playClip,
-          }}
-        />
-        {/* <div className="player"> */}
-        {/*   Audio loaded: {audioBuffer ? <Control handleClick={play} /> : "No"} */}
-        {/* </div> */}
+        <div className="clipList">
+          <ClipList
+            {...{ clipList, setClipList, currentClip, setCurrentClip }}
+          />
+        </div>
+        <div className="clipEditor">
+          <ClipEditor
+            {...{
+              arrayBuffer,
+              currentClip,
+              patchClip,
+              playClip,
+            }}
+          />
+        </div>
+      </div>
+      {/* WARNING: Remove before deployment */}
+      <div>
+        <pre style={{ textAlign: "left", whiteSpace: "pre-line" }}>
+          {JSON.stringify(currentClip, null, 2).replace(/, /g, "\n")}
+        </pre>
       </div>
     </div>
   );
