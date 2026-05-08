@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./Clips.css";
 import ClipList from "./ClipList";
-import useInitialNullState from "../hooks/useInitialNullState";
 
 import {
   Chart as ChartJS,
@@ -53,7 +52,9 @@ export default function Clips() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [clipList, setClipList] = useState<Clip[]>([]);
-  const [currentClip, setCurrentClip] = useInitialNullState<Clip>();
+  const [currentClipId, setCurrentClipId] = useState<number | null>(null);
+  const currentClip =
+    clipList.find((clip) => clip.id === currentClipId) ?? null;
 
   const path = currentClip && currentClip.sample?.path;
   const fileUrl = path ? `/${path}` : null;
@@ -86,18 +87,16 @@ export default function Clips() {
     loadAudio();
   }, [fileUrl]);
 
-  const { queue: queuePatch } = useDebouncedClipPatch(currentClip?.id);
+  const { queue: queuePatch } = useDebouncedClipPatch(currentClipId ?? undefined);
 
   const patchClip = async (updates: Partial<Clip>): Promise<void> => {
-    if (currentClip) {
-      setCurrentClip((prev): Clip => (prev ? { ...prev, ...updates } : prev));
-      setClipList(
-        clipList.map((clip) =>
-          clip.id === currentClip.id ? { ...currentClip, ...updates } : clip,
-        ),
-      );
-      queuePatch(updates);
-    }
+    if (currentClipId == null) return;
+    setClipList((prev) =>
+      prev.map((clip) =>
+        clip.id === currentClipId ? { ...clip, ...updates } : clip,
+      ),
+    );
+    queuePatch(updates);
   };
 
   return (
@@ -105,7 +104,7 @@ export default function Clips() {
       <div className="samplesWrapper">
         <div className="clipList">
           <ClipList
-            {...{ clipList, setClipList, currentClip, setCurrentClip }}
+            {...{ clipList, setClipList, currentClipId, setCurrentClipId }}
           />
         </div>
         <div className="clipEditor">

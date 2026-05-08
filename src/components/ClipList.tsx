@@ -4,14 +4,14 @@ import { Clip } from "./Clips";
 interface ClipProps {
   clipList: Clip[];
   setClipList: Dispatch<SetStateAction<Clip[]>>;
-  currentClip: Clip | null;
-  setCurrentClip: Dispatch<SetStateAction<Clip>>;
+  currentClipId: number | null;
+  setCurrentClipId: Dispatch<SetStateAction<number | null>>;
 }
 export default function ClipList({
   clipList,
   setClipList,
-  currentClip,
-  setCurrentClip,
+  currentClipId,
+  setCurrentClipId,
 }: ClipProps) {
   useEffect(() => {
     const getClips = async () => {
@@ -34,10 +34,10 @@ export default function ClipList({
           ? clipList?.map((clip) => (
               <div
                 className={
-                  clip.id === currentClip?.id ? "listSelected" : "listItem"
+                  clip.id === currentClipId ? "listSelected" : "listItem"
                 }
                 key={clip.id}
-                onClick={() => setCurrentClip(clip)}
+                onClick={() => setCurrentClipId(clip.id)}
               >
                 {clip.name}:{clip.sample?.name}
               </div>
