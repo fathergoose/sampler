@@ -1,10 +1,10 @@
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
-import { Clip, Sample } from "./Clips";
+import { Clip, ClipParameters, Sample } from "./Clips";
 import "./Clips.css";
 
 interface SampleListProps {
   currentClip: Clip | null;
-  patchClip: (updates: Partial<Clip>) => Promise<void>;
+  patchClip: (updates: Partial<ClipParameters>) => Promise<void>;
 }
 
 export default function SampleList({
@@ -37,7 +37,7 @@ export default function SampleList({
                 ? "listSelected"
                 : "listItem"
             }
-            onClick={() => currentClip && patchClip({ ...currentClip, sample })}
+            onClick={() => currentClip && patchClip({ sampleId: sample.id })}
           >
             {sample.name}
           </div>

@@ -41,6 +41,10 @@ export interface Clip {
   sample: Sample | null;
 }
 
+export type ClipParameters = Omit<Clip, "sample"> & {
+  sampleId: number;
+};
+
 export interface PlayState {
   isPlaying: boolean;
   playHead: number;
@@ -87,9 +91,11 @@ export default function Clips() {
     loadAudio();
   }, [fileUrl]);
 
-  const { queue: queuePatch } = useDebouncedClipPatch(currentClipId ?? undefined);
+  const { queue: queuePatch } = useDebouncedClipPatch(
+    currentClipId ?? undefined,
+  );
 
-  const patchClip = async (updates: Partial<Clip>): Promise<void> => {
+  const patchClip = async (updates: Partial<ClipParameters>): Promise<void> => {
     if (currentClipId == null) return;
     setClipList((prev) =>
       prev.map((clip) =>
