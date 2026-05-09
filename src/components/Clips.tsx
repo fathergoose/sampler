@@ -67,7 +67,9 @@ export default function Clips() {
     if (currentClip) {
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
+      const gainNode = new GainNode(audioContext);
+      gainNode.gain.value = currentClip.gain;
+      source.connect(gainNode).connect(audioContext.destination);
       source.loop = false;
       source.start(0, currentClip.startAt, currentClip.endAt);
     }

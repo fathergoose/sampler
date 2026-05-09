@@ -25,7 +25,9 @@ export default function ClipParameters({
       <ParseFloatField
         label="Gain"
         value={currentClip?.gain ?? 0}
-        onChange={(val) => patchClip({ gain: val })}
+        onChange={(val) =>
+          patchClip({ gain: val <= 0 ? 0 : val >= 1.25 ? 1.25 : val })
+        }
       />
     </>
   );
