@@ -1,8 +1,9 @@
 import Waveform from "./Waveform";
 import ClipParameters from "./ClipParameters";
 import { Clip } from "./Clips";
-import { Dispatch, SetStateAction } from "react";
 import SampleList from "./SampleList";
+import ClipEnvelope from "./ClipEnvelope";
+import FilterControl from "./FilterControl";
 
 interface ClipEditorProps {
   arrayBuffer: ArrayBuffer | null;
@@ -33,6 +34,8 @@ export default function ClipEditor({
           />
         )}
         <ClipParameters {...{ currentClip, patchClip }} />
+        <ClipEnvelope {...{ currentClip, patchClip }} />
+        <FilterControl {...{ currentClip, patchClip }} />
       </div>
     </>
   );

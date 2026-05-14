@@ -19,16 +19,19 @@ export default function ParseFloatField({
 
   return (
     <>
-      <label>{label}</label>
-      <input
-        type="text"
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          const val = parseFloat(e.target.value);
-          if (!isNaN(val)) onChange(val);
-        }}
-      />
+      <label>
+        {label}
+        <input
+          type="text"
+          name={label}
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val)) onChange(val);
+          }}
+        />
+      </label>
     </>
   );
 }

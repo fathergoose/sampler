@@ -31,17 +31,41 @@ export interface Sample {
   source: string;
   created: string;
 }
+// TODO: perhaps ad&r should be Ramp types and sustain should be a percent or fraction type
+export interface Envelope {
+  attack: number;
+  decay: number;
+  sustain: number;
+  release: number;
+}
 
+interface Filter {
+  frequency: number;
+  detune: number;
+  Q: number;
+  gain: number;
+  type:
+    | "lowpass"
+    | "highpass"
+    | "bandpass"
+    | "lowshelf"
+    | "highshelf"
+    | "peaking"
+    | "notch"
+    | "allpass";
+}
 export interface Clip {
   id: number;
   name: string;
   startAt: number;
   endAt: number;
   gain: number;
+  envelope: Envelope;
+  filter: Filter;
   sample: Sample | null;
 }
 
-export type ClipParameters = Omit<Clip, "sample"> & {
+export type ClipParameters = Clip & {
   sampleId: number;
 };
 
@@ -65,11 +89,29 @@ export default function Clips() {
 
   const playClip = () => {
     if (currentClip) {
+      const lpf = new BiquadFilterNode(audioContext, {
+        type: currentClip.filter.type,
+        frequency: currentClip.filter.frequency,
+      });
+      const now = audioContext.currentTime;
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
+
       const gainNode = new GainNode(audioContext);
-      gainNode.gain.value = currentClip.gain;
-      source.connect(gainNode).connect(audioContext.destination);
+      gainNode.gain.cancelScheduledValues(now);
+
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(
+        currentClip.gain,
+        now + currentClip.envelope.attack,
+      );
+      gainNode.gain.linearRampToValueAtTime(
+        currentClip.envelope.sustain,
+        now + currentClip.envelope.attack + currentClip.envelope.decay,
+      );
+      // release doesn't make any sense yet untill I have a concept of a held / gated note
+      // gainNode.gain.value = currentClip.gain;
+      source.connect(gainNode).connect(lpf).connect(audioContext.destination);
       source.loop = false;
       source.start(0, currentClip.startAt, currentClip.endAt);
     }

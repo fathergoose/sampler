@@ -18,7 +18,24 @@ export default function ClipList({
       const result = await fetch("/api/clips/all");
       const body = await result.json();
       console.log(body);
-      setClipList(body);
+      // TODO: Find real min and max values to use here
+      setClipList(
+        body.map(
+          (c: Clip): Clip => ({
+            ...c,
+            ...{
+              envelope: { attack: 0, decay: 0.5, sustain: 0, release: 0 },
+              filter: {
+                frequency: 22000,
+                detune: 0,
+                Q: 0,
+                gain: 1,
+                type: "lowpass",
+              },
+            },
+          }),
+        ),
+      );
     };
     getClips();
     return () => {

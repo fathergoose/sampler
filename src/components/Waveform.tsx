@@ -1,6 +1,6 @@
 import { Chart as ChartJS } from "chart.js";
 import { Chart } from "react-chartjs-2";
-import { Dispatch, SetStateAction, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { precisionRound } from "../utilities/MathHelpers";
 import { Clip } from "./Clips";
 import { useAudioData } from "../hooks/useAudioData";

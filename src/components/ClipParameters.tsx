@@ -22,13 +22,18 @@ export default function ClipParameters({
         value={currentClip?.endAt ?? 0}
         onChange={(val) => patchClip({ endAt: val })}
       />
-      <ParseFloatField
-        label="Gain"
-        value={currentClip?.gain ?? 0}
-        onChange={(val) =>
-          patchClip({ gain: val <= 0 ? 0 : val >= 1.25 ? 1.25 : val })
-        }
-      />
+      <label>
+        Gain:
+        <input
+          type="range"
+          className="verticalSlider"
+          min={0}
+          max={1.25}
+          step={0.0001}
+          value={typeof currentClip?.gain === "number" ? currentClip.gain : 1}
+          onChange={(e) => patchClip({ gain: parseFloat(e.target.value) })}
+        />
+      </label>
     </>
   );
 }

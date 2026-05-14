@@ -37,7 +37,9 @@ export default function SampleList({
                 ? "listSelected"
                 : "listItem"
             }
-            onClick={() => currentClip && patchClip({ sampleId: sample.id })}
+            onClick={() =>
+              currentClip && patchClip({ sampleId: sample.id, sample: sample })
+            }
           >
             {sample.name}
           </div>
