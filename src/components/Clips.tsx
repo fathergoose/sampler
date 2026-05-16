@@ -92,6 +92,7 @@ export default function Clips() {
       const lpf = new BiquadFilterNode(audioContext, {
         type: currentClip.filter.type,
         frequency: currentClip.filter.frequency,
+        Q: currentClip.filter.Q,
       });
       const now = audioContext.currentTime;
       const source = audioContext.createBufferSource();

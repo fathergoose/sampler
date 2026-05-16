@@ -17,10 +17,13 @@ export default function FilterControl({
    */
   const minHz = 20;
   const maxHz = 22_000;
+
+  const mindB = 0.1;
+  const maxdB = 20;
   return (
     <>
       <label>
-        Filter:
+        Cutoff:
         <input
           type="range"
           min={0}
@@ -41,6 +44,34 @@ export default function FilterControl({
                 filter: {
                   ...currentClip.filter,
                   ...{ frequency },
+                },
+              });
+            }
+          }}
+        />
+      </label>
+      <label>
+        Resonance:
+        <input
+          type="range"
+          min={0}
+          max={1_000}
+          step={1}
+          value={
+            typeof currentClip?.filter.Q === "number"
+              ? (Math.log(currentClip.filter.Q / mindB) /
+                  Math.log(maxdB / mindB)) *
+                1_000
+              : 1
+          }
+          onChange={(e) => {
+            if (currentClip) {
+              const position = parseInt(e.target.value);
+              const Q = mindB * (maxdB / mindB) ** (position / 1_000);
+              patchClip({
+                filter: {
+                  ...currentClip.filter,
+                  ...{ Q },
                 },
               });
             }
